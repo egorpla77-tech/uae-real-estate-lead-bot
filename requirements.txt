@@ -1,0 +1,10 @@
+requests>=2.31.0
+instaloader>=4.13.2
+PySocks>=1.7.1
+python-socks[asyncio]>=2.4.4
+websocket-client>=1.8.0
+google-api-python-client>=2.130.0
+google-auth>=2.29.0
+telethon>=1.36.0
+qrcode>=8.2
+paramiko>=3.4.0
