@@ -161,6 +161,34 @@ SELLER_MARKERS = (
     "i am selling",
     "agent listing",
 )
+AGENT_LISTING_MARKERS = (
+    "updated price",
+    "update price",
+    "price updated",
+    "asking price",
+    "we pay",
+    "commission",
+    "комисси",
+    "top-up",
+    "top up",
+    "distress deal",
+    "distress opportunity",
+    "current market value",
+    "submit a competitive offer",
+    "on your behalf",
+    "urgent buyer requirement",
+    "buyer requirement",
+    "seller required",
+    "sellers welcome",
+    "agents welcome",
+    "direct owners",
+    "direct owner",
+    "rented",
+    "tenanted",
+    "vacant on transfer",
+    "viewing is required",
+    "contact:",
+)
 NON_TARGET_MARKERS = (
     "вакансия",
     "ищем брокера",
@@ -239,6 +267,15 @@ def is_self_promo(normalized: str, text: str) -> bool:
     return promo_hits >= 2 or (promo_hits >= 1 and contacts >= 1) or contacts >= 3
 
 
+def is_agent_listing(normalized: str, text: str) -> bool:
+    hits = sum(1 for marker in AGENT_LISTING_MARKERS if marker in text)
+    if hits >= 2:
+        return True
+    if hits and (PHONE_RE.search(normalized) or URL_RE.search(normalized)):
+        return True
+    return bool(hits and len(normalized) >= 180 and "?" not in normalized)
+
+
 def classify_lead(value: str, context: str = "", source_title: str = "") -> Tuple[Optional[LeadSignal], str]:
     normalized = normalize_text(value)
     text = lowered(normalized)
@@ -253,6 +290,8 @@ def classify_lead(value: str, context: str = "", source_title: str = "") -> Tupl
         return None, "non_target"
     if is_self_promo(normalized, text):
         return None, "self_promo"
+    if is_agent_listing(normalized, text):
+        return None, "agent_listing"
 
     destination = detect_destination(text) or detect_destination(context_text)
     if not destination:
@@ -284,7 +323,6 @@ def classify_lead(value: str, context: str = "", source_title: str = "") -> Tupl
             " интересует",
             " рассматриваю",
             " i ",
-            " we ",
         ),
     )
 
