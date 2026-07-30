@@ -128,6 +128,8 @@ def main() -> None:
                 "classifier.py",
                 "instagram_collector.py",
                 "telegram_collector.py",
+                "regional_sources.py",
+                "regional_source_discovery.py",
                 "setup_telegram_session.py",
                 "setup_telegram_qr_session.py",
                 "sheets_sync.py",
@@ -135,11 +137,13 @@ def main() -> None:
                 "storage.py",
                 "requirements.txt",
                 "discovery_candidates.json",
+                "regional_sources.json",
                 "tests/test_classifier.py",
                 "tests/test_access.py",
                 "tests/test_instagram_collector.py",
                 "tests/test_source_discovery.py",
                 "tests/test_telegram_collector.py",
+                "tests/test_regional_sources.py",
                 "deploy/resolv.conf",
                 "deploy/uae-real-estate-lead-bot.service",
             ]
@@ -213,7 +217,7 @@ def main() -> None:
             if not copied:
                 raise
 
-        run(client, f"cd {REMOTE} && .venv/bin/python -m py_compile bot.py classifier.py instagram_collector.py telegram_collector.py setup_telegram_session.py setup_telegram_qr_session.py sheets_sync.py source_discovery.py storage.py")
+        run(client, f"cd {REMOTE} && .venv/bin/python -m py_compile bot.py classifier.py instagram_collector.py telegram_collector.py regional_sources.py regional_source_discovery.py setup_telegram_session.py setup_telegram_qr_session.py sheets_sync.py source_discovery.py storage.py")
         run(client, f"cd {REMOTE} && .venv/bin/python -m unittest discover -s tests -q", timeout=120)
         run(client, "systemctl daemon-reload")
         run(client, f"systemctl enable {SERVICE}")

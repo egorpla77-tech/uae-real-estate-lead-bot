@@ -1,0 +1,209 @@
+{
+  "version": 1,
+  "cities": [
+    "Москва",
+    "Санкт-Петербург",
+    "Екатеринбург",
+    "Казань",
+    "Тюмень",
+    "Сургут",
+    "Новосибирск",
+    "Уфа",
+    "Краснодар",
+    "Сочи",
+    "Самара",
+    "Челябинск",
+    "Пермь",
+    "Ростов-на-Дону",
+    "Владивосток",
+    "Хабаровск"
+  ],
+  "sources": [
+    {
+      "platform": "vk",
+      "city": "Москва",
+      "category": "investments_business_real_estate",
+      "names": ["bcs_world_of_investments", "birzhevikofficial", "atlanty_club", "finam_ru", "bnawinwin", "metrumestate"]
+    },
+    {
+      "platform": "vk",
+      "city": "Санкт-Петербург",
+      "category": "real_estate_finance",
+      "names": ["obozrevatelspb", "krasnov_kvartira_spb", "kvartiraspbolimp", "yourfinancesspb", "estateme"]
+    },
+    {
+      "platform": "vk",
+      "city": "Екатеринбург",
+      "category": "business_real_estate",
+      "names": ["figitalpro", "business_banya_ekb", "dolevka96"]
+    },
+    {
+      "platform": "vk",
+      "city": "Казань",
+      "category": "business_real_estate",
+      "names": ["tclubspace", "rielt_ildar", "novostroikaremont", "elena_myan_rieltor", "ooocentergroup", "pokupka.kvartir.kazan"]
+    },
+    {
+      "platform": "vk",
+      "city": "Тюмень",
+      "category": "investments_business_real_estate",
+      "names": ["tmninvest", "neurobussines_72", "club132819576", "kvartira_vik", "na_orbite_72", "nedvizhka_tyumen"]
+    },
+    {
+      "platform": "vk",
+      "city": "Сургут",
+      "category": "real_estate",
+      "names": ["naberezhniy_surgut", "novosurgut", "novohotsurgut"]
+    },
+    {
+      "platform": "vk",
+      "city": "Новосибирск",
+      "category": "business_real_estate_finance",
+      "names": ["prideclubru", "gorod_stroy54", "club239971224", "club156283439", "gorod_154", "alexeybreev_life"]
+    },
+    {
+      "platform": "vk",
+      "city": "Уфа",
+      "category": "real_estate_finance",
+      "names": ["normobzor", "gk_kpd_official", "bashirova_elza_rieltor", "ufa_agent", "realtymarkt_ru", "ufanovostroi"]
+    },
+    {
+      "platform": "vk",
+      "city": "Краснодар",
+      "category": "business_investments_real_estate",
+      "names": ["krd_prostore", "rieltor_sergeiemelin", "marina_manianova", "terrakrasnodar", "krdshpatel", "ugant_komersant"]
+    },
+    {
+      "platform": "vk",
+      "city": "Сочи",
+      "category": "business_investments_real_estate",
+      "names": ["eanedsochi", "terra_sochi_official", "sochirealty", "vsochikvartiri", "dvizhka_club"]
+    },
+    {
+      "platform": "vk",
+      "city": "Самара",
+      "category": "business_investments_real_estate",
+      "names": ["terra_samara", "samaraculture", "investinsamara", "sk_transgruz"]
+    },
+    {
+      "platform": "vk",
+      "city": "Челябинск",
+      "category": "business_investments_real_estate",
+      "names": ["businessbanya74", "investregion174", "eristavipro"]
+    },
+    {
+      "platform": "vk",
+      "city": "Пермь",
+      "category": "investments_real_estate",
+      "names": ["razvitie59", "pmd_ru", "investorplotnikov", "permglavsnab", "megapolis059", "novostroykipermi"]
+    },
+    {
+      "platform": "vk",
+      "city": "Владивосток",
+      "category": "business_real_estate",
+      "names": ["bizvdk", "azdv_pro", "pronedvizhkyvl"]
+    },
+    {
+      "platform": "vk",
+      "city": "Хабаровск",
+      "category": "investments_real_estate",
+      "names": ["khvinvest", "ooo_uip", "dvhab_ru"]
+    },
+    {
+      "platform": "telegram",
+      "city": "Москва",
+      "category": "investments_real_estate_finance",
+      "names": ["investmoscowru", "NovostroyM", "moscow_exchange_2020", "InvestBizMos", "investzal", "MoscowNedvizh"]
+    },
+    {
+      "platform": "telegram",
+      "city": "Санкт-Петербург",
+      "category": "business_investments_real_estate",
+      "names": ["nedwijimostspb", "qZGs6OZYyItlOGRi", "sadenovm", "KharybinPR", "mtsadenov", "musespb"]
+    },
+    {
+      "platform": "telegram",
+      "city": "Екатеринбург",
+      "category": "business_investments_real_estate",
+      "names": ["EKBBC", "ekatbc1", "investekat", "ekaterinburg_biznes", "novostrojki_ekaterinburga", "ChernovaNovostroy"]
+    },
+    {
+      "platform": "telegram",
+      "city": "Казань",
+      "category": "business_investments_real_estate",
+      "names": ["xata2022", "novostroyky", "novostroiko", "rakurs_kazan", "terrakznchat", "terra_kazan_official"]
+    },
+    {
+      "platform": "telegram",
+      "city": "Тюмень",
+      "category": "business_investments_real_estate",
+      "names": ["TerraTyumen", "lala_etagi", "club_women_iam", "komtmn", "tyumensdelki", "novostroiki_tyumeni"]
+    },
+    {
+      "platform": "telegram",
+      "city": "Сургут",
+      "category": "business_investments_real_estate",
+      "names": ["novostroy_surgut", "surgutsd", "novostroikisurgut", "pronovostroikichestno", "novohotsurgut", "KilikaevaMarianna_etagi"]
+    },
+    {
+      "platform": "telegram",
+      "city": "Новосибирск",
+      "category": "business_investments_real_estate",
+      "names": ["nakotlovanensk", "novostroykinovosibirsk", "freedommk54", "doma_novostroiky_novosib", "novosib_biznes", "wirthouse_nsk"]
+    },
+    {
+      "platform": "telegram",
+      "city": "Уфа",
+      "category": "business_investments_real_estate_finance",
+      "names": ["clubterraufa", "ufafinancepro", "ufa_nedvizhimost102", "Gk_kpd_official", "ufasdelka", "novostroiki_aliya"]
+    },
+    {
+      "platform": "telegram",
+      "city": "Краснодар",
+      "category": "business_investments_real_estate",
+      "names": ["novostroyki_krd", "manianova_nedvizh", "krd88088", "krasnodar_commercial", "apikkinvest", "nedvkras"]
+    },
+    {
+      "platform": "telegram",
+      "city": "Сочи",
+      "category": "business_investments_real_estate",
+      "names": ["InvesBizSochi", "NeginskiSochi", "zhivi_na_more", "chatnedvizkaotkosti", "domgidrnd", "club_ms"]
+    },
+    {
+      "platform": "telegram",
+      "city": "Самара",
+      "category": "business_investments_real_estate",
+      "names": ["samara_bizness", "rating_samara", "Samara_InvestPark"]
+    },
+    {
+      "platform": "telegram",
+      "city": "Челябинск",
+      "category": "business_investments_real_estate",
+      "names": ["TerraChelyabinsk", "chelyabinsk_biznes", "novostroyki74", "naydenov_new_buildings", "dohodnayanedvizka", "kvartira_v_chelyabinske"]
+    },
+    {
+      "platform": "telegram",
+      "city": "Пермь",
+      "category": "business_investments_real_estate",
+      "names": ["novostroy_cnng", "perm_terra", "novostroykipermi", "perm_biznes", "dr_realty", "hbktime"]
+    },
+    {
+      "platform": "telegram",
+      "city": "Ростов-на-Дону",
+      "category": "business_investments_real_estate",
+      "names": ["m2_komstroy", "TerraRostov", "betonarina", "m2komstroy", "violetta_tsarenk0"]
+    },
+    {
+      "platform": "telegram",
+      "city": "Владивосток",
+      "category": "business_real_estate",
+      "names": ["arenda_vladivostoka", "novostroiky_ru", "gk_nd_vladivostok", "vostochnygorod", "kvadradosti_news", "vladivostoksd"]
+    },
+    {
+      "platform": "telegram",
+      "city": "Хабаровск",
+      "category": "business_real_estate",
+      "names": ["vashakvartira27", "habarovsk_biznes", "novostroika_dv", "novo_khv", "novostroykikhv"]
+    }
+  ]
+}

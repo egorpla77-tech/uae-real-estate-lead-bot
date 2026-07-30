@@ -9,7 +9,7 @@ import sys
 import threading
 import time
 import warnings
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
@@ -27,9 +27,15 @@ from instagram_collector import (
     parse_instagram_sources,
 )
 from sheets_sync import SheetsSync
+from regional_sources import load_regional_sources, source_city_map, source_names
 from source_discovery import DiscoveryCandidate, SourceDiscovery, load_catalog
 from storage import AccessStore, JsonStore, LeadStore, lead_dedupe_keys
-from telegram_collector import TelegramCandidate, TelegramCollector, collector_from_env
+from telegram_collector import (
+    TelegramCandidate,
+    TelegramCollector,
+    collector_from_env,
+    regional_collector_from_env,
+)
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -40,6 +46,7 @@ LEADS_PATH = DATA_DIR / "leads.json"
 CURSOR_PATH = DATA_DIR / "source_cursor.json"
 DISCOVERY_STATE_PATH = DATA_DIR / "source_discovery.json"
 DISCOVERY_CATALOG_PATH = BASE_DIR / "discovery_candidates.json"
+REGIONAL_CATALOG_PATH = BASE_DIR / "regional_sources.json"
 LOG_PATH = BASE_DIR / "bot.log"
 
 VK_API_URL = "https://api.vk.com/method"
@@ -403,6 +410,7 @@ class Hit:
     created_at: int
     signal: LeadSignal
     segment: str
+    source_city: str = ""
 
 
 class StopSignal:
@@ -795,6 +803,7 @@ class Monitor:
         self.wall_posts_limit = max(1, min(100, env_int("WALL_POSTS_LIMIT", 25)))
         self.priority_batch_size = max(1, env_int("PRIORITY_BATCH_SIZE", 20))
         self.market_batch_size = max(1, env_int("MARKET_BATCH_SIZE", 4))
+        self.regional_batch_size = max(1, env_int("REGIONAL_BATCH_SIZE", 20))
         self.request_delay = max(0.2, env_float("VK_REQUEST_DELAY_SECONDS", 0.55))
         self.allow_group_posts = env_bool("ALLOW_GROUP_POSTS", False)
         self.scan_board_topics = env_bool("SCAN_BOARD_TOPICS", True)
@@ -808,10 +817,23 @@ class Monitor:
         self.discovery_reject_seconds = max(86400, env_int("SOURCE_DISCOVERY_REJECT_SECONDS", 2592000))
         self.instagram_enabled = False
         self.telegram_user_enabled = env_bool("TELEGRAM_ENABLED", False)
+        self.regional_enabled = env_bool("REGIONAL_ENABLED", True)
 
         self.source_names = parse_csv(os.getenv("VK_SOURCES", ",".join(DEFAULT_SOURCES)))
         extras = parse_csv(os.getenv("VK_SOURCES_EXTRA", ""))
         self.source_names += [item for item in extras if item not in self.source_names]
+        regional_vk = load_regional_sources(REGIONAL_CATALOG_PATH, "vk") if self.regional_enabled else []
+        regional_telegram = load_regional_sources(REGIONAL_CATALOG_PATH, "telegram") if self.regional_enabled else []
+        self.regional_vk_city_map = source_city_map(regional_vk)
+        self.regional_telegram_city_map = source_city_map(regional_telegram)
+        self.regional_vk_names = {
+            item.name.lower()
+            for item in regional_vk
+        }
+        source_keys = {name.lower() for name in self.source_names}
+        self.source_names += [
+            name for name in source_names(regional_vk) if name.lower() not in source_keys
+        ]
         full_catalog = load_catalog(DISCOVERY_CATALOG_PATH, require_target_match=False)
         if env_bool("VK_INCLUDE_ALL_CANDIDATES", True):
             source_keys = {name.lower() for name in self.source_names}
@@ -869,8 +891,16 @@ class Monitor:
                 allow_graphql_fallback=env_bool("INSTAGRAM_ALLOW_GRAPHQL_FALLBACK", False),
             )
         self.telegram_user: Optional[TelegramCollector] = None
+        self.telegram_regional: Optional[TelegramCollector] = None
         if self.telegram_user_enabled:
             self.telegram_user = collector_from_env(BASE_DIR, self.lookback_hours)
+            if regional_telegram:
+                self.telegram_regional = regional_collector_from_env(
+                    BASE_DIR,
+                    self.lookback_hours,
+                    source_names(regional_telegram),
+                    self.regional_telegram_city_map,
+                )
         self.telegram = TelegramClient(tg_token)
         self.stop_signal = StopSignal()
         self.scan_lock = threading.Lock()
@@ -887,7 +917,16 @@ class Monitor:
             logging.info("Telegram-бот подключен: @%s", me.get("username", "unknown"))
 
         logging.info("Подключение %s источников VK, VK API токенов: %s", len(self.source_names), self.vk.token_count)
-        self.sources = self.vk.resolve_sources(self.source_names)
+        resolved_sources = self.vk.resolve_sources(self.source_names)
+        self.sources = [
+            Source(
+                screen_name=source.screen_name,
+                group_id=source.group_id,
+                title=source.title,
+                city=self.regional_vk_city_map.get(source.screen_name.lower(), source.city),
+            )
+            for source in resolved_sources
+        ]
         if not self.sources:
             raise RuntimeError("Не удалось подключить ни одного сообщества VK")
         logging.info("Подключено источников VK: %s", len(self.sources))
@@ -899,6 +938,13 @@ class Monitor:
             )
         if self.telegram_user_enabled and self.telegram_user:
             logging.info("Telegram user parser настроен: источников %s", len(self.telegram_user.source_names))
+        if self.regional_enabled:
+            logging.info(
+                "Региональный радар: VK=%s, Telegram=%s, городов=%s",
+                len(self.regional_vk_names),
+                len(self.regional_telegram_city_map),
+                len(set(self.regional_vk_city_map.values()) | set(self.regional_telegram_city_map.values())),
+            )
 
     def recipients(self) -> List[str]:
         return self.access.recipients()
@@ -911,7 +957,8 @@ class Monitor:
     def telegram_source_count(self) -> int:
         if not self.telegram_user_enabled or not self.telegram_user:
             return 0
-        return len(self.telegram_user.source_names)
+        regional_count = len(self.telegram_regional.source_names) if self.telegram_regional else 0
+        return len(self.telegram_user.source_names) + regional_count
 
     def broadcast(self, text: str, reply_markup: Optional[Dict[str, Any]] = None) -> int:
         sent = 0
@@ -922,12 +969,22 @@ class Monitor:
         return sent
 
     def sources_for_scan(self) -> List[Source]:
-        priority = [source for source in self.sources if source.screen_name in self.competitor_names]
-        market = [source for source in self.sources if source.screen_name not in self.competitor_names]
+        regional = [source for source in self.sources if source.screen_name.lower() in self.regional_vk_names]
+        priority = [
+            source
+            for source in self.sources
+            if source.screen_name in self.competitor_names and source.screen_name.lower() not in self.regional_vk_names
+        ]
+        market = [
+            source
+            for source in self.sources
+            if source.screen_name not in self.competitor_names and source.screen_name.lower() not in self.regional_vk_names
+        ]
         payload = self.cursor.read()
         payload = payload if isinstance(payload, dict) else {}
         priority_cursor = int(payload.get("priority_cursor", 0) or 0)
         market_cursor = int(payload.get("market_cursor", 0) or 0)
+        regional_cursor = int(payload.get("regional_cursor", 0) or 0)
         selected: List[Source] = []
 
         if priority:
@@ -940,8 +997,19 @@ class Monitor:
             count = min(self.market_batch_size, len(market))
             selected.extend(market[(market_cursor + index) % len(market)] for index in range(count))
             market_cursor = (market_cursor + count) % len(market)
+        if regional:
+            regional_cursor %= len(regional)
+            count = min(self.regional_batch_size, len(regional))
+            selected.extend(regional[(regional_cursor + index) % len(regional)] for index in range(count))
+            regional_cursor = (regional_cursor + count) % len(regional)
 
-        self.cursor.write({"priority_cursor": priority_cursor, "market_cursor": market_cursor})
+        self.cursor.write(
+            {
+                "priority_cursor": priority_cursor,
+                "market_cursor": market_cursor,
+                "regional_cursor": regional_cursor,
+            }
+        )
         return selected
 
     def make_hit(
@@ -964,6 +1032,9 @@ class Monitor:
         stats[reason] = stats.get(reason, 0) + 1
         if not signal_data:
             return None
+        is_regional = source.screen_name.lower() in self.regional_vk_names
+        if is_regional and source.city:
+            signal_data = replace(signal_data, origin=f"{source.city} → ОАЭ")
         if author_id <= 0 and not self.allow_group_posts:
             stats["group_post"] = stats.get("group_post", 0) + 1
             return None
@@ -976,7 +1047,14 @@ class Monitor:
             direct_url=direct_url,
             created_at=created_at,
             signal=signal_data,
-            segment="competitor" if source.screen_name in self.competitor_names else "market",
+            segment=(
+                "regional"
+                if is_regional
+                else "competitor"
+                if source.screen_name in self.competitor_names
+                else "market"
+            ),
+            source_city=source.city if is_regional else "",
         )
 
     def make_instagram_hit(self, candidate: InstagramCandidate, stats: Dict[str, int]) -> Optional[Hit]:
@@ -1007,6 +1085,7 @@ class Monitor:
             created_at=candidate.created_at,
             signal=signal_data,
             segment="instagram",
+            source_city="",
         )
 
     def make_telegram_hit(self, candidate: TelegramCandidate, stats: Dict[str, int]) -> Optional[Hit]:
@@ -1027,6 +1106,8 @@ class Monitor:
         stats[f"telegram_{reason}"] = stats.get(f"telegram_{reason}", 0) + 1
         if not signal_data:
             return None
+        if candidate.segment == "regional" and candidate.source_city:
+            signal_data = replace(signal_data, origin=f"{candidate.source_city} → ОАЭ")
         return Hit(
             uid=candidate.uid,
             source_title=candidate.source_title,
@@ -1036,7 +1117,8 @@ class Monitor:
             direct_url=candidate.direct_url,
             created_at=candidate.created_at,
             signal=signal_data,
-            segment="telegram",
+            segment=candidate.segment,
+            source_city=candidate.source_city,
         )
 
     def scan_source(self, source: Source, since_ts: int, stats: Dict[str, int]) -> List[Hit]:
@@ -1240,6 +1322,22 @@ class Monitor:
             except Exception:
                 stats["telegram_scan_error"] = stats.get("telegram_scan_error", 0) + 1
                 logging.exception("Ошибка при проверке Telegram user parser")
+        if self.telegram_user_enabled and self.telegram_regional:
+            try:
+                regional_candidates, regional_stats = self.telegram_regional.collect()
+                stats.update(
+                    {
+                        f"regional_{key}": stats.get(f"regional_{key}", 0) + value
+                        for key, value in regional_stats.items()
+                    }
+                )
+                for candidate in regional_candidates:
+                    hit = self.make_telegram_hit(candidate, stats)
+                    if hit:
+                        hits.append(hit)
+            except Exception:
+                stats["regional_telegram_scan_error"] = stats.get("regional_telegram_scan_error", 0) + 1
+                logging.exception("Ошибка при проверке регионального Telegram-радара")
         try:
             self.run_source_discovery(stats)
         except Exception:
@@ -1260,7 +1358,9 @@ class Monitor:
             "purchase": "Хочет купить",
             "consultation": "Нужна консультация",
         }
-        if hit.segment == "competitor":
+        if hit.segment == "regional":
+            header = f"🔥 РЕГИОНАЛЬНЫЙ ЛИД: {hit.source_city or 'РОССИЯ'} → ДУБАЙ"
+        elif hit.segment == "competitor":
             header = "⚡ ЛИД У КОНКУРЕНТА"
         elif hit.segment == "instagram":
             header = "📸 ЛИД ИЗ INSTAGRAM"
@@ -1281,6 +1381,8 @@ class Monitor:
         ]
         if hit.signal.destination:
             lines.append(f"<b>Город:</b> {html.escape(hit.signal.destination)}")
+        if hit.source_city:
+            lines.append(f"<b>Регион РФ:</b> {html.escape(hit.source_city)}")
         lines.extend(
             [
                 f"<b>Маркер:</b> <code>{html.escape(hit.signal.phrase)}</code>",

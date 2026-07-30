@@ -82,6 +82,8 @@ class TelegramCandidate:
     author_url: str
     direct_url: str
     created_at: int
+    source_city: str = ""
+    segment: str = "telegram"
 
 
 def telegram_source_name(value: str) -> str:
@@ -211,6 +213,9 @@ class TelegramCollector:
         proxy_url: str = "",
         session_name: str = "telegram_uae_real_estate_leads",
         chat_message_limit: int = 200,
+        cursor_filename: str = "telegram_cursor.json",
+        source_city_map: Optional[Dict[str, str]] = None,
+        candidate_segment: str = "telegram",
     ) -> None:
         self.api_id = str(api_id or "").strip()
         self.api_hash = str(api_hash or "").strip()
@@ -228,7 +233,13 @@ class TelegramCollector:
         self.proxy_url = proxy_url
         self.session_name = session_name.strip() or "telegram_uae_real_estate_leads"
         self.chat_message_limit = max(self.post_limit, int(chat_message_limit or self.post_limit))
-        self.cursor = JsonStore(data_dir / "telegram_cursor.json", {"source_cursor": 0})
+        self.source_city_map = {
+            str(name).strip().lower(): str(city).strip()
+            for name, city in (source_city_map or {}).items()
+            if str(name).strip() and str(city).strip()
+        }
+        self.candidate_segment = candidate_segment.strip() or "telegram"
+        self.cursor = JsonStore(data_dir / (cursor_filename.strip() or "telegram_cursor.json"), {"source_cursor": 0})
         self.session_file = data_dir / self.session_name
         self.http = requests.Session()
         self.http.headers.update(
@@ -362,6 +373,8 @@ class TelegramCollector:
                     author_url="",
                     direct_url=direct_url or source_url,
                     created_at=created_at or int(time.time()),
+                    source_city=self.source_city_map.get(source.lower(), ""),
+                    segment=self.candidate_segment,
                 )
             )
             if len(candidates) >= self.post_limit:
@@ -527,6 +540,9 @@ class TelegramCollector:
             author_url=author_url,
             direct_url=direct_url or source_url,
             created_at=created_at or int(time.time()),
+            source_city=self.source_city_map.get(telegram_source_name(source_url).lower(), "")
+            or self.source_city_map.get(telegram_source_name(source_title).lower(), ""),
+            segment=self.candidate_segment,
         )
 
 
@@ -550,4 +566,37 @@ def collector_from_env(base_dir: Path, lookback_hours: int) -> TelegramCollector
         proxy_url=os.getenv("TELEGRAM_PROXY", ""),
         session_name=os.getenv("TELEGRAM_SESSION_NAME", "telegram_uae_real_estate_leads"),
         chat_message_limit=max(1, int(os.getenv("TELEGRAM_CHAT_MESSAGE_LIMIT", "200") or 200)),
+    )
+
+
+def regional_collector_from_env(
+    base_dir: Path,
+    lookback_hours: int,
+    sources: List[str],
+    city_map: Dict[str, str],
+) -> TelegramCollector:
+    data_dir = base_dir / "data"
+    return TelegramCollector(
+        api_id=os.getenv("TELEGRAM_API_ID", ""),
+        api_hash=os.getenv("TELEGRAM_API_HASH", ""),
+        data_dir=data_dir,
+        source_names=parse_telegram_sources(",".join(sources), []),
+        lookback_hours=max(1, int(os.getenv("TELEGRAM_LOOKBACK_HOURS", str(lookback_hours)) or lookback_hours)),
+        source_batch_size=max(0, int(os.getenv("TELEGRAM_REGIONAL_SOURCE_BATCH_SIZE", "24") or 24)),
+        post_limit=max(1, int(os.getenv("TELEGRAM_REGIONAL_POST_LIMIT", "30") or 30)),
+        comments_limit=max(1, int(os.getenv("TELEGRAM_COMMENTS_LIMIT", "80") or 80)),
+        scan_comments=str(os.getenv("TELEGRAM_SCAN_COMMENTS", "true")).strip().lower() in {"1", "true", "yes", "да", "on"},
+        request_delay=max(0.0, float(os.getenv("TELEGRAM_REQUEST_DELAY_SECONDS", "0.7") or 0.7)),
+        public_web_fallback=_env_bool("TELEGRAM_PUBLIC_WEB_FALLBACK", True),
+        request_timeout=max(5.0, float(os.getenv("TELEGRAM_REQUEST_TIMEOUT_SECONDS", "30") or 30)),
+        comment_max_age_days=max(0, int(os.getenv("TELEGRAM_COMMENT_MAX_AGE_DAYS", "5") or 5)),
+        proxy_url=os.getenv("TELEGRAM_PROXY", ""),
+        session_name=os.getenv("TELEGRAM_SESSION_NAME", "telegram_uae_real_estate_leads"),
+        chat_message_limit=max(
+            1,
+            int(os.getenv("TELEGRAM_REGIONAL_CHAT_MESSAGE_LIMIT", "300") or 300),
+        ),
+        cursor_filename="telegram_regional_cursor.json",
+        source_city_map=city_map,
+        candidate_segment="regional",
     )

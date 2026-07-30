@@ -111,6 +111,8 @@ class TelegramCollectorTest(unittest.TestCase):
                 public_web_fallback=False,
                 request_timeout=30,
                 chat_message_limit=500,
+                source_city_map={"russian_dubai_chat": "Казань"},
+                candidate_segment="regional",
             )
             stats: dict[str, int] = {}
             candidates = asyncio.run(
@@ -119,6 +121,8 @@ class TelegramCollectorTest(unittest.TestCase):
 
         self.assertEqual(client.requested_limits, [500])
         self.assertEqual([candidate.text for candidate in candidates], ["Можно ли купить квартиру в ипотеку?"])
+        self.assertEqual(candidates[0].source_city, "Казань")
+        self.assertEqual(candidates[0].segment, "regional")
 
 
 if __name__ == "__main__":

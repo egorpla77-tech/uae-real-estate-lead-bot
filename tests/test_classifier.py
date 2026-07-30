@@ -123,6 +123,24 @@ class UaeRealEstateClassifierTests(unittest.TestCase):
             with self.subTest(text=text[:50]):
                 self.assert_lead(text, context=context, source_title=source_title)
 
+    def test_regional_source_requires_uae_intent(self):
+        self.assert_not_lead(
+            "Какая цена и можно в ипотеку?",
+            context="Новая квартира рядом с центром Казани",
+            source_title="Новостройки Казани",
+        )
+        self.assert_lead(
+            "Живу в Казани, хочу купить квартиру в Дубае. Какой первоначальный взнос?",
+            source_title="Новостройки Казани",
+            kind="financing",
+        )
+        self.assert_lead(
+            "Hi, could you please send me more details?",
+            context="Apartments for sale in Dubai with payment plan",
+            source_title="Бизнес-клуб Екатеринбурга",
+            kind="consultation",
+        )
+
     def test_rejects_recent_feed_noise(self):
         noise = [
             (
