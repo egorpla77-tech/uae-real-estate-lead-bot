@@ -804,6 +804,8 @@ class Monitor:
         self.priority_batch_size = max(1, env_int("PRIORITY_BATCH_SIZE", 20))
         self.market_batch_size = max(1, env_int("MARKET_BATCH_SIZE", 4))
         self.regional_batch_size = max(1, env_int("REGIONAL_BATCH_SIZE", 20))
+        self.regional_wall_posts_limit = max(1, min(30, env_int("REGIONAL_WALL_POSTS_LIMIT", 8)))
+        self.regional_comments_limit = max(1, min(100, env_int("REGIONAL_COMMENTS_LIMIT", 80)))
         self.request_delay = max(0.2, env_float("VK_REQUEST_DELAY_SECONDS", 0.55))
         self.allow_group_posts = env_bool("ALLOW_GROUP_POSTS", False)
         self.scan_board_topics = env_bool("SCAN_BOARD_TOPICS", True)
@@ -1123,7 +1125,9 @@ class Monitor:
 
     def scan_source(self, source: Source, since_ts: int, stats: Dict[str, int]) -> List[Hit]:
         hits: List[Hit] = []
-        posts = list(self.vk.wall_posts(source, self.wall_posts_limit))
+        is_regional = source.screen_name.lower() in self.regional_vk_names
+        post_limit = self.regional_wall_posts_limit if is_regional else self.wall_posts_limit
+        posts = list(self.vk.wall_posts(source, post_limit))
         stats["posts_seen"] = stats.get("posts_seen", 0) + len(posts)
         for post in posts:
             post_id = int(post.get("id", 0) or 0)
@@ -1147,7 +1151,12 @@ class Monitor:
             comments_count = int((post.get("comments") or {}).get("count", 0) or 0)
             if comments_count <= 0:
                 continue
-            for comment in self.vk.wall_comments(source, post_id, since_ts):
+            for comment in self.vk.wall_comments(
+                source,
+                post_id,
+                since_ts,
+                max_items=self.regional_comments_limit if is_regional else 0,
+            ):
                 comment_id = int(comment.get("id", 0) or 0)
                 comment_created = int(comment.get("date", 0) or 0)
                 comment_author = int(comment.get("from_id", 0) or 0)
@@ -1164,7 +1173,7 @@ class Monitor:
                 if hit:
                     hits.append(hit)
 
-        if self.scan_board_topics:
+        if self.scan_board_topics and not is_regional:
             for topic in self.vk.board_topics(source, since_ts):
                 topic_id = int(topic.get("id", 0) or 0)
                 topic_title = str(topic.get("title", ""))
