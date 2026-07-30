@@ -811,7 +811,17 @@ class Monitor:
         self.source_names = parse_csv(os.getenv("VK_SOURCES", ",".join(DEFAULT_SOURCES)))
         extras = parse_csv(os.getenv("VK_SOURCES_EXTRA", ""))
         self.source_names += [item for item in extras if item not in self.source_names]
-        self.discovery_catalog = load_catalog(DISCOVERY_CATALOG_PATH, self.source_names)
+        full_catalog = load_catalog(DISCOVERY_CATALOG_PATH, require_target_match=False)
+        if env_bool("VK_INCLUDE_ALL_CANDIDATES", True):
+            source_keys = {name.lower() for name in self.source_names}
+            for candidate in full_catalog:
+                if candidate.screen_name.lower() not in source_keys:
+                    self.source_names.append(candidate.screen_name)
+                    source_keys.add(candidate.screen_name.lower())
+        active_keys = {name.lower() for name in self.source_names}
+        self.discovery_catalog = [
+            candidate for candidate in full_catalog if candidate.screen_name.lower() not in active_keys
+        ]
         self.discovery = SourceDiscovery(
             self.discovery_catalog,
             JsonStore(DISCOVERY_STATE_PATH, {"cursor": 0, "candidates": {}}),

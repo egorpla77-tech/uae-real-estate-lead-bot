@@ -39,15 +39,20 @@ class DiscoveryCandidate:
 
 
 def is_uae_real_estate_candidate(title: str, description: str = "") -> bool:
+    title_text = title.lower()
     text = f"{title} {description}".lower()
     return (
         bool(UAE_RE.search(text))
         and bool(REAL_ESTATE_RE.search(text))
-        and not any(marker in text for marker in NON_TARGET_MARKERS)
+        and not any(marker in title_text for marker in NON_TARGET_MARKERS)
     )
 
 
-def load_catalog(path: Path, excluded_names: Iterable[str] = ()) -> List[DiscoveryCandidate]:
+def load_catalog(
+    path: Path,
+    excluded_names: Iterable[str] = (),
+    require_target_match: bool = True,
+) -> List[DiscoveryCandidate]:
     excluded = {str(name).strip().lower() for name in excluded_names if str(name).strip()}
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -69,7 +74,7 @@ def load_catalog(path: Path, excluded_names: Iterable[str] = ()) -> List[Discove
             or key in seen
             or key in excluded
             or region not in ALLOWED_REGIONS
-            or not is_uae_real_estate_candidate(title, description)
+            or (require_target_match and not is_uae_real_estate_candidate(title, description))
         ):
             continue
         seen.add(key)
