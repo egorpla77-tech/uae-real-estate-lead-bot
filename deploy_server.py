@@ -40,8 +40,9 @@ def read_env(path: Path) -> dict[str, str]:
     return values
 
 
-def server_env_text() -> str:
+def server_env_text(existing_values: dict[str, str] | None = None) -> str:
     values = read_env(BASE / ".env")
+    existing_values = existing_values or {}
     legacy_values: dict[str, str] = {}
     legacy_path = values.get("LEGACY_ENV_PATH", "")
     if legacy_path:
@@ -59,7 +60,10 @@ def server_env_text() -> str:
         values["TELEGRAM_BOT_PROXY"] = os.environ.get("SERVER_TELEGRAM_BOT_PROXY", "direct")
     user_proxy = values.get("TELEGRAM_PROXY", "").lower()
     if "127.0.0.1" in user_proxy or "localhost" in user_proxy:
-        values["TELEGRAM_PROXY"] = os.environ.get("SERVER_TELEGRAM_PROXY", "")
+        values["TELEGRAM_PROXY"] = (
+            os.environ.get("SERVER_TELEGRAM_PROXY", "").strip()
+            or existing_values.get("TELEGRAM_PROXY", "").strip()
+        )
     return "\n".join(f"{key}={value}" for key, value in values.items()) + "\n"
 
 
@@ -69,6 +73,23 @@ def remote_exists(sftp, path: str) -> bool:
         return True
     except FileNotFoundError:
         return False
+
+
+def read_remote_env(sftp, path: str) -> dict[str, str]:
+    if not remote_exists(sftp, path):
+        return {}
+    with sftp.open(path, "r") as stream:
+        payload = stream.read()
+    if isinstance(payload, bytes):
+        payload = payload.decode("utf-8-sig", "replace")
+    values: dict[str, str] = {}
+    for raw_line in str(payload).splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        values[key.strip()] = value.strip().strip('"').strip("'")
+    return values
 
 
 def main() -> None:
@@ -127,8 +148,10 @@ def main() -> None:
                 remote = f"{REMOTE}/{relative.replace(os.sep, '/')}"
                 sftp.put(str(local), remote)
 
-            with sftp.open(f"{REMOTE}/.env", "w") as stream:
-                stream.write(server_env_text())
+            remote_env_path = f"{REMOTE}/.env"
+            existing_values = read_remote_env(sftp, remote_env_path)
+            with sftp.open(remote_env_path, "w") as stream:
+                stream.write(server_env_text(existing_values))
             sftp.chmod(f"{REMOTE}/.env", 0o600)
 
             # Первая установка может забрать уже занятые локальные места доступа.
