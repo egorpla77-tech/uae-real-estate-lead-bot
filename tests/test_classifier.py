@@ -92,6 +92,75 @@ class UaeRealEstateClassifierTests(unittest.TestCase):
         self.assert_not_lead("Ищем брокера по недвижимости, работа в Дубае")
         self.assert_not_lead("Сколько стоит горящий тур в Дубай?", source_title="Туры в ОАЭ")
 
+    def test_user_approved_lead_examples(self):
+        approved = [
+            (
+                "Добрый день всем 🌞 Подскажите, пожалуйста, кто покупал недвижимость в Дубае. "
+                "Интересует ипотека для иностранцев. Какие условия, какой нужен первоначальный "
+                "взнос и реально ли ее получить?",
+                "",
+                "Русские в Дубае",
+            ),
+            (
+                "Добрый. Кто может помочь проконсультировать по недвижимости квартиры "
+                "ипотека/рассрочка? В лс",
+                "",
+                "Русские в Дубае",
+            ),
+            (
+                "Hi, could you please send me more details?",
+                "1BR apartment for sale in Dubai Marina",
+                "Dubai Real Estate",
+            ),
+            (
+                "Looking to buy building in JLT, Commercial-Residential. "
+                "Budget: 800 M AED. Only JLT",
+                "",
+                "Dubai Real Estate",
+            ),
+        ]
+        for text, context, source_title in approved:
+            with self.subTest(text=text[:50]):
+                self.assert_lead(text, context=context, source_title=source_title)
+
+    def test_rejects_recent_feed_noise(self):
+        noise = [
+            (
+                "All available apartments in Serenia Living. More than 30 active units on the "
+                "market. Direct listings from owners only. 2-bedroom Sea View AED 7,500,000. "
+                "I can arrange viewings and help find the perfect option for your client. "
+                "Working with agents. +971585746968"
+            ),
+            (
+                "FOR SALE – YASMINA, Duet Villa. Expo City Village. Size 3930 sqft. "
+                "Handover Q4 2026. Price AED 6,900,000 with post handover plan. "
+                "Contact us +971502677214"
+            ),
+            (
+                "I have client looking for one bedroom in District 1 MBR. Ready to move in, "
+                "vacant, cash buyer and ready for viewing immediately."
+            ),
+            (
+                "Looking to buy. Serious cash buyer. Client is ready to view and purchase "
+                "immediately. Damac Hills townhouse 3BR, budget AED 1.5M. "
+                "You should be covered. Please share available options."
+            ),
+            "Здравствуйте! Кто-то сдает свою квартиру на длительный срок?",
+            "Ищу квартиру от собственника в аренду на год",
+            "Ищу койко место в Дубае, напишите в личку",
+            (
+                "Ищу фотографа с собственной фотостудией для создания модельного портфолио. "
+                "Отправьте стоимость съемки. Локация: Дубай."
+            ),
+            (
+                "Vacancies are limited for experienced real estate agents in the UAE. "
+                "Send me DM for more information and join the company."
+            ),
+        ]
+        for text in noise:
+            with self.subTest(text=text[:50]):
+                self.assert_not_lead(text, source_title="Dubai Real Estate")
+
 
     def test_marks_buyer_from_russia(self):
         signal = self.assert_lead(

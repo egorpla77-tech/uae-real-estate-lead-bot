@@ -144,7 +144,9 @@ SELF_PROMO_MARKERS = (
     "подписывайтесь",
     "ссылка в профиле",
     "dm me",
+    "send me dm",
     "contact me",
+    "contact us",
     "our agency",
     "limited offer",
 )
@@ -162,6 +164,24 @@ SELLER_MARKERS = (
     "agent listing",
 )
 AGENT_LISTING_MARKERS = (
+    "for sale",
+    "for rent",
+    "selling price",
+    "sale price",
+    "price reduced",
+    "direct listings",
+    "available units",
+    "owners only",
+    "developer:",
+    "i am covered",
+    "you should be covered",
+    "working with agents",
+    "for your client",
+    "i have client",
+    "my direct client",
+    "direct client",
+    "client is ready",
+    "please share available options",
     "updated price",
     "update price",
     "price updated",
@@ -201,6 +221,26 @@ NON_TARGET_MARKERS = (
     "автомобиль",
     "машина",
     "работа в дубае",
+    "в аренду",
+    "снять квартиру",
+    "сниму квартиру",
+    "сдает квартиру",
+    "сдаёт квартиру",
+    "длительный срок",
+    "койко место",
+    "койко-место",
+    "bedspace",
+    "looking to rent",
+    "for rent",
+    "фотограф",
+    "фотостуди",
+    "модельное портфолио",
+    "модельные тесты",
+    "мебель",
+    "vacancy",
+    "vacancies",
+    "real estate agents",
+    "join the company",
 )
 
 RUSSIA_BUYER_MARKERS = (
@@ -369,6 +409,8 @@ def classify_lead(value: str, context: str = "", source_title: str = "") -> Tupl
         )
     ):
         return None, "no_buyer_intent"
+    if (price_phrase or handover_phrase or layout_phrase) and not (short_intent or question or buy_phrase):
+        return None, "passive_listing"
 
     if finance_phrase:
         kind, phrase = "financing", finance_phrase
