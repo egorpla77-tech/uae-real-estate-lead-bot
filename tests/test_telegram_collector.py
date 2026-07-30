@@ -33,12 +33,21 @@ class _Entity:
     broadcast = True
 
 
+class _ChatEntity:
+    id = 456
+    username = "russian_dubai_chat"
+    title = "Russian Dubai Chat"
+    broadcast = False
+
+
 class _Client:
     def __init__(self, post: _Message, replies: list[_Message]) -> None:
         self.post = post
         self.replies = replies
+        self.requested_limits: list[int] = []
 
     async def iter_messages(self, entity: object, limit: int, reply_to: int | None = None):
+        self.requested_limits.append(limit)
         items = self.replies if reply_to else [self.post]
         for item in items[:limit]:
             yield item
@@ -80,6 +89,36 @@ class TelegramCollectorTest(unittest.TestCase):
 
         self.assertEqual([candidate.text for candidate in candidates], ["Цена до Москвы?"])
         self.assertEqual(stats.get("telegram_comments_old_skipped"), 1)
+
+
+    def test_busy_chat_uses_deeper_message_limit(self) -> None:
+        now = datetime.now(timezone.utc)
+        post = _Message(100, "Можно ли купить квартиру в ипотеку?", now)
+        client = _Client(post, [])
+
+        with TemporaryDirectory() as tmp:
+            collector = TelegramCollector(
+                api_id="",
+                api_hash="",
+                data_dir=Path(tmp),
+                source_names=["russian_dubai_chat"],
+                lookback_hours=24,
+                source_batch_size=1,
+                post_limit=30,
+                comments_limit=10,
+                scan_comments=True,
+                request_delay=0,
+                public_web_fallback=False,
+                request_timeout=30,
+                chat_message_limit=500,
+            )
+            stats: dict[str, int] = {}
+            candidates = asyncio.run(
+                collector._collect_source(client, _ChatEntity(), "russian_dubai_chat", 0, 0, stats)
+            )
+
+        self.assertEqual(client.requested_limits, [500])
+        self.assertEqual([candidate.text for candidate in candidates], ["Можно ли купить квартиру в ипотеку?"])
 
 
 if __name__ == "__main__":

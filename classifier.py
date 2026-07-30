@@ -203,6 +203,33 @@ NON_TARGET_MARKERS = (
     "работа в дубае",
 )
 
+RUSSIA_BUYER_MARKERS = (
+    "из россии",
+    "нахожусь в россии",
+    "живу в россии",
+    "из рф",
+    "из москвы",
+    "в москве",
+    "из санкт-петербурга",
+    "из петербурга",
+    "из спб",
+    "в спб",
+    "оплатить рублями",
+    "оплата рублями",
+    "бюджет в рублях",
+    "перевести деньги из россии",
+    "перевести деньги из рф",
+    "российского банка",
+    "счет в россии",
+    "счёт в россии",
+    "сбербанк",
+    "тинькофф",
+    "т-банк",
+    "дистанционная сделка",
+    "купить удаленно",
+    "купить удалённо",
+)
+
 PHONE_RE = re.compile(r"(?:\+\d[\d\s()\-]{8,}\d)")
 URL_RE = re.compile(r"(?:https?://|t\.me/|vk\.com/)", re.IGNORECASE)
 MONEY_RE = re.compile(
@@ -371,13 +398,16 @@ def classify_lead(value: str, context: str = "", source_title: str = "") -> Tupl
         score += 1
     if PHONE_RE.search(normalized):
         score += 1
+    russian_buyer = has_any(text, RUSSIA_BUYER_MARKERS) or "₽" in normalized
+    if russian_buyer:
+        score += 2
 
     return LeadSignal(
         kind=kind,
         phrase=phrase,
         temperature="hot" if score >= 5 else "warm",
         score=score,
-        origin="Недвижимость ОАЭ",
+        origin="Россия → ОАЭ" if russian_buyer else "Недвижимость ОАЭ",
         vehicle=detect_object(combined),
         destination=destination,
     ), "matched"

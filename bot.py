@@ -382,6 +382,7 @@ DEFAULT_SOURCES = [
     "uae.dubai.invest",
     "dubai_realty_com",
     "dubairealestate_space",
+    "realestate99",
 ]
 @dataclass(frozen=True)
 class Source:

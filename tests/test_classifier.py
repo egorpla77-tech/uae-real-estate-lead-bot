@@ -93,5 +93,22 @@ class UaeRealEstateClassifierTests(unittest.TestCase):
         self.assert_not_lead("Сколько стоит горящий тур в Дубай?", source_title="Туры в ОАЭ")
 
 
+    def test_marks_buyer_from_russia(self):
+        signal = self.assert_lead(
+            "Я из Москвы, хочу купить квартиру в Дубае. Можно оплатить рублями?",
+            kind="purchase",
+        )
+        self.assertEqual("Россия → ОАЭ", signal.origin)
+        self.assertEqual("hot", signal.temperature)
+
+    def test_does_not_infer_russia_from_source_only(self):
+        signal = self.assert_lead(
+            "Хочу купить квартиру в Дубае, какие есть варианты?",
+            source_title="Русские в Дубае",
+            kind="purchase",
+        )
+        self.assertEqual("Недвижимость ОАЭ", signal.origin)
+
+
 if __name__ == "__main__":
     unittest.main()

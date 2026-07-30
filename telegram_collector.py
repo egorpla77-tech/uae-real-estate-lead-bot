@@ -42,6 +42,29 @@ DEFAULT_TELEGRAM_SOURCES = [
     "ageevarealestate",
     "institutrieltora",
     "dubaiunrealestate",
+    # Russian-speaking UAE communities: capture demand before a buyer reaches
+    # a real-estate agency, including relocation, finance and lifestyle chats.
+    "chat_dubai_group",
+    "chatrusdubai",
+    "ChatRussianDubai",
+    "russiandxb",
+    "dubai_chat_russians",
+    "russians_v_dubai",
+    "dubaichat_rus",
+    "dubai_uae_oae_russkiye_v_dubae",
+    "russiandubaiuae",
+    "russkie_dubai",
+    "dubai_russo",
+    # Russian-language investment and relocation channels.
+    "dubai_inv",
+    "traniodubai",
+    "maltsev_uae",
+    "dubaidecode",
+    "burjuyinvest",
+    "dubaiforbrokers",
+    "oncountt",
+    "dubaidisint",
+    "elizavetagalueva",
 ]
 
 TELEGRAM_URL_RE = re.compile(r"(?:https?://)?t\.me/(?:s/)?([^/?#\s]+)", re.IGNORECASE)
@@ -187,6 +210,7 @@ class TelegramCollector:
         comment_max_age_days: int = 5,
         proxy_url: str = "",
         session_name: str = "telegram_uae_real_estate_leads",
+        chat_message_limit: int = 200,
     ) -> None:
         self.api_id = str(api_id or "").strip()
         self.api_hash = str(api_hash or "").strip()
@@ -203,6 +227,7 @@ class TelegramCollector:
         self.comment_max_age_days = max(0, int(comment_max_age_days or 0))
         self.proxy_url = proxy_url
         self.session_name = session_name.strip() or "telegram_uae_real_estate_leads"
+        self.chat_message_limit = max(self.post_limit, int(chat_message_limit or self.post_limit))
         self.cursor = JsonStore(data_dir / "telegram_cursor.json", {"source_cursor": 0})
         self.session_file = data_dir / self.session_name
         self.http = requests.Session()
@@ -408,7 +433,11 @@ class TelegramCollector:
         source_url = telegram_entity_url(username)
         is_broadcast = bool(getattr(entity, "broadcast", False))
 
-        async for message in client.iter_messages(entity, limit=self.post_limit):
+        # Busy public chats can easily publish more messages between two
+        # rotations than a channel's normal post limit. Read a deeper window
+        # for chats while keeping channel/comment scans bounded.
+        message_limit = self.post_limit if is_broadcast else self.chat_message_limit
+        async for message in client.iter_messages(entity, limit=message_limit):
             message_id = int(getattr(message, "id", 0) or 0)
             created_at = _timestamp(getattr(message, "date", None))
             if created_at and created_at < since_ts:
@@ -520,4 +549,5 @@ def collector_from_env(base_dir: Path, lookback_hours: int) -> TelegramCollector
         comment_max_age_days=max(0, int(os.getenv("TELEGRAM_COMMENT_MAX_AGE_DAYS", "5") or 5)),
         proxy_url=os.getenv("TELEGRAM_PROXY", ""),
         session_name=os.getenv("TELEGRAM_SESSION_NAME", "telegram_uae_real_estate_leads"),
+        chat_message_limit=max(1, int(os.getenv("TELEGRAM_CHAT_MESSAGE_LIMIT", "200") or 200)),
     )
