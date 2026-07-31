@@ -174,6 +174,12 @@ class UaeRealEstateClassifierTests(unittest.TestCase):
                 "Vacancies are limited for experienced real estate agents in the UAE. "
                 "Send me DM for more information and join the company."
             ),
+            (
+                "Calling All Dubai Real Estate Professionals. We're building a dedicated "
+                "network for serious agents. Improve broker collaboration and share verified "
+                "opportunities. In a market where networking = deals, join early. "
+                "https://example.com/details?id=connect"
+            ),
         ]
         for text in noise:
             with self.subTest(text=text[:50]):

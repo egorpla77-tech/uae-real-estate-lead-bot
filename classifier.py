@@ -240,6 +240,11 @@ NON_TARGET_MARKERS = (
     "vacancy",
     "vacancies",
     "real estate agents",
+    "real estate professionals",
+    "broker collaboration",
+    "network for serious agents",
+    "networking = deals",
+    "join early",
     "join the company",
 )
 

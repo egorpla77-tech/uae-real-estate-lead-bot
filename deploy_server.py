@@ -64,6 +64,9 @@ def server_env_text(existing_values: dict[str, str] | None = None) -> str:
             os.environ.get("SERVER_TELEGRAM_PROXY", "").strip()
             or existing_values.get("TELEGRAM_PROXY", "").strip()
         )
+    server_session_name = existing_values.get("TELEGRAM_SESSION_NAME", "").strip()
+    if server_session_name.startswith("telegram_server_"):
+        values["TELEGRAM_SESSION_NAME"] = server_session_name
     return "\n".join(f"{key}={value}" for key, value in values.items()) + "\n"
 
 
@@ -170,11 +173,8 @@ def main() -> None:
                 if not remote_exists(sftp, remote):
                     sftp.put(str(local), remote)
                     sftp.chmod(remote, 0o600)
-            for local in (BASE / "data").glob("telegram_*.session"):
-                remote = f"{REMOTE}/data/{local.name}"
-                if not remote_exists(sftp, remote):
-                    sftp.put(str(local), remote)
-                    sftp.chmod(remote, 0o600)
+            # Telegram authorization keys must not be reused from two IP addresses.
+            # The server session is always created and kept on the server itself.
             google_credentials = BASE / "data" / "google_service_account.json"
             if google_credentials.exists():
                 remote = f"{REMOTE}/data/google_service_account.json"
